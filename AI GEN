@@ -1,0 +1,172 @@
+-- Create the ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ExampleScreenGui"
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Create the Draggable Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0.2, 0, 0.3, 0)
+frame.Position = UDim2.new(0.4, 0, 0.35, 0)
+frame.BackgroundColor3 = Color3.fromRGB(70, 130, 180) -- SteelBlue color
+frame.BorderSizePixel = 2
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+-- Create the Infinite Jump Button
+local textButton = Instance.new("TextButton")
+textButton.Size = UDim2.new(1, 0, 0.2, 0)
+textButton.Position = UDim2.new(0, 0, 0, 0)
+textButton.BackgroundColor3 = Color3.fromRGB(100, 149, 237) -- CornflowerBlue color
+textButton.Text = "Enable Infinite Jump"
+textButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+textButton.Parent = frame
+
+local infiniteJumpEnabled = false
+
+-- Define the Infinite Jump button click function
+textButton.MouseButton1Click:Connect(function()
+    infiniteJumpEnabled = not infiniteJumpEnabled
+    textButton.Text = infiniteJumpEnabled and "Disable Infinite Jump" or "Enable Infinite Jump"
+    print("Infinite Jump " .. (infiniteJumpEnabled and "Enabled" or "Disabled"))
+end)
+
+-- Create the Walkspeed Slider
+local slider = Instance.new("TextButton")
+slider.Size = UDim2.new(1, 0, 0.2, 0)
+slider.Position = UDim2.new(0, 0, 0.25, 0)
+slider.BackgroundColor3 = Color3.fromRGB(100, 149, 237) -- CornflowerBlue color
+slider.Text = "Walkspeed: 16" -- Default walkspeed
+slider.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+slider.Parent = frame
+
+-- Define the Walkspeed slider functionality
+local UIS = game:GetService("UserInputService")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+local minWalkspeed = 16
+local maxWalkspeed = 400
+
+slider.MouseButton1Down:Connect(function()
+    local dragging = true
+    local conn
+    conn = UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local relativePosition = input.Position.X - slider.AbsolutePosition.X
+            local percentage = math.clamp(relativePosition / slider.AbsoluteSize.X, 0, 1)
+            local walkspeed = minWalkspeed + percentage * (maxWalkspeed - minWalkspeed)
+            humanoid.WalkSpeed = math.floor(walkspeed)
+            slider.Text = "Walkspeed: " .. tostring(math.floor(walkspeed))
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            conn:Disconnect()
+        end
+    end)
+end)
+
+-- Create the Fly Button
+local flyButton = Instance.new("TextButton")
+flyButton.Size = UDim2.new(1, 0, 0.2, 0)
+flyButton.Position = UDim2.new(0, 0, 0.5, 0)
+flyButton.BackgroundColor3 = Color3.fromRGB(100, 149, 237) -- CornflowerBlue color
+flyButton.Text = "Enable Fly"
+flyButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+flyButton.Parent = frame
+
+local flyEnabled = false
+local flySpeed = 50
+
+-- Define the Fly button click function
+flyButton.MouseButton1Click:Connect(function()
+    flyEnabled = not flyEnabled
+    flyButton.Text = flyEnabled and "Disable Fly" or "Enable Fly"
+    print("Fly " .. (flyEnabled and "Enabled" or "Disabled"))
+    
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    
+    if flyEnabled and humanoidRootPart then
+        -- Create and configure BodyVelocity for movement
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "FlyVelocity"
+        bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = humanoidRootPart
+
+        -- Create and configure BodyGyro for stability
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.Name = "FlyGyro"
+        bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+        bodyGyro.P = 1250
+        bodyGyro.Parent = humanoidRootPart
+
+        -- Update BodyVelocity based on player input
+        local flyConnection
+        flyConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            if flyEnabled then
+                local direction = Vector3.new(0, 0, 0)
+                if UIS:IsKeyDown(Enum.KeyCode.W) then
+                    direction = direction + workspace.CurrentCamera.CFrame.LookVector
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.S) then
+                    direction = direction - workspace.CurrentCamera.CFrame.LookVector
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.A) then
+                    direction = direction - workspace.CurrentCamera.CFrame.RightVector
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.D) then
+                    direction = direction + workspace.CurrentCamera.CFrame.RightVector
+                end
+                bodyVelocity.Velocity = direction * flySpeed
+                bodyGyro.CFrame = workspace.CurrentCamera.CFrame
+            else
+                flyConnection:Disconnect()
+                bodyVelocity:Destroy()
+                bodyGyro:Destroy()
+            end
+        end)
+    else
+        local bodyVelocity = humanoidRootPart:FindFirstChild("FlyVelocity")
+        local bodyGyro = humanoidRootPart:FindFirstChild("FlyGyro")
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+    end
+end)
+
+-- Create the Flight Speed Slider
+local flySpeedSlider = Instance.new("TextButton")
+flySpeedSlider.Size = UDim2.new(1, 0, 0.2, 0)
+flySpeedSlider.Position = UDim2.new(0, 0, 0.75, 0)
+flySpeedSlider.BackgroundColor3 = Color3.fromRGB(100, 149, 237) -- CornflowerBlue color
+flySpeedSlider.Text = "Flight Speed: 50" -- Default flight speed
+flySpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+flySpeedSlider.Parent = frame
+
+local minFlySpeed = 10
+local maxFlySpeed = 100
+
+-- Define the Flight Speed slider functionality
+flySpeedSlider.MouseButton1Down:Connect(function()
+    local dragging = true
+    local conn
+    conn = UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local relativePosition = input.Position.X - flySpeedSlider.AbsolutePosition.X
+            local percentage = math.clamp(relativePosition / flySpeedSlider.AbsoluteSize.X, 0, 1)
+            flySpeed = minFlySpeed + percentage * (maxFlySpeed - minFlySpeed)
+            flySpeedSlider.Text = "Flight Speed: " .. tostring(math.floor(flySpeed))
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            conn:Disconnect()
+        end
+    end)
+end)
